@@ -11,9 +11,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.io.IOException
 
 @HiltViewModel
 class CharacterDetailViewModel @Inject constructor(
@@ -28,6 +31,8 @@ class CharacterDetailViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(CharacterDetailUiState(isLoading = true))
     val uiState = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<CharacterDetailEvent>()
+    val events = _events.asSharedFlow()
 
     init {
         observeFavoriteStatus()
@@ -36,8 +41,9 @@ class CharacterDetailViewModel @Inject constructor(
 
     fun onAction(action: CharacterDetailAction) {
         when (action) {
-            CharacterDetailAction.FavoriteClicked -> toggleFavorite()
-            CharacterDetailAction.RetryFavoriteClicked -> toggleFavorite()
+            CharacterDetailAction.FavoriteClicked -> toggleFavorite(showFeedback = true)
+            CharacterDetailAction.UndoFavoriteClicked -> toggleFavorite(showFeedback = false)
+            CharacterDetailAction.RetryFavoriteClicked -> toggleFavorite(showFeedback = false)
             CharacterDetailAction.DismissFavoriteError -> {
                 _uiState.update { it.copy(hasFavoriteOperationError = false) }
             }
@@ -55,12 +61,23 @@ class CharacterDetailViewModel @Inject constructor(
         }
     }
 
-    private fun toggleFavorite() {
+    private fun toggleFavorite(showFeedback: Boolean) {
         val character = _uiState.value.character ?: return
+        val wasFavorite = _uiState.value.isFavorite
 
         viewModelScope.launch {
             _uiState.update { it.copy(hasFavoriteOperationError = false) }
             runCatching { toggleFavorite(character) }
+                .onSuccess {
+                    if (showFeedback) {
+                        _events.emit(
+                            CharacterDetailEvent.FavoriteUpdated(
+                                character = character,
+                                wasFavorite = wasFavorite,
+                            ),
+                        )
+                    }
+                }
                 .onFailure { exception ->
                     if (exception is CancellationException) throw exception
                     _uiState.update { it.copy(hasFavoriteOperationError = true) }
@@ -70,7 +87,13 @@ class CharacterDetailViewModel @Inject constructor(
 
     private fun loadCharacter() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, hasError = false) }
+            _uiState.update {
+                it.copy(
+                    isLoading = true,
+                    hasError = false,
+                    isOfflineError = false,
+                )
+            }
 
             runCatching { getCharacter(characterId) }
                 .onSuccess { character ->
@@ -79,6 +102,7 @@ class CharacterDetailViewModel @Inject constructor(
                             isLoading = false,
                             character = character,
                             hasError = false,
+                            isOfflineError = false,
                         )
                     }
                 }
@@ -88,9 +112,14 @@ class CharacterDetailViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             hasError = true,
+                            isOfflineError = exception.isNetworkUnavailable(),
                         )
                     }
                 }
         }
     }
 }
+
+private fun Throwable.isNetworkUnavailable(): Boolean =
+    generateSequence(this) { throwable -> throwable.cause }
+        .any { throwable -> throwable is IOException }

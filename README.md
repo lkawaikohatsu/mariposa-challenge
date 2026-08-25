@@ -83,12 +83,12 @@ El APK se genera en `app/build/outputs/apk/debug/`.
 
 Cobertura incluida:
 
-- `CharacterListViewModel`: debounce y último query.
+- `CharacterListViewModel`: debounce, último query y restauración de búsqueda/posición.
 - `CharacterPagingSource`: éxito, error de red y error de deserialización.
-- `CharacterDetailViewModel`: `characterId` desde `SavedStateHandle` y fallo al actualizar favorito.
+- `CharacterDetailViewModel`: `characterId` desde `SavedStateHandle`, estado offline y feedback de favorito.
 - `ToggleFavoriteUseCase`: delegación al repositorio.
 - `CharacterRepositoryImpl`: mapeo antes de persistir el favorito.
-- `FavoritesViewModel`: conserva el favorito fallido para reintentar.
+- `FavoritesViewModel`: conserva el favorito fallido para reintentar y emite la acción de deshacer.
 - `FavoritesScreenTest`: estado vacío de Compose.
 
 La última validación confirmó `testDebugUnitTest`, `assembleDebug`, `lintDebug` y `connectedDebugAndroidTest`. El test instrumentado se ejecutó correctamente en el emulador `Medium_Phone_API_36.1`.

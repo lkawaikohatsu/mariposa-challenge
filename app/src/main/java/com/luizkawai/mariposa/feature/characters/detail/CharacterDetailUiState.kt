@@ -7,5 +7,6 @@ data class CharacterDetailUiState(
     val character: Character? = null,
     val isFavorite: Boolean = false,
     val hasError: Boolean = false,
+    val isOfflineError: Boolean = false,
     val hasFavoriteOperationError: Boolean = false,
 )

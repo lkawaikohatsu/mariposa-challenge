@@ -1,5 +1,6 @@
 package com.luizkawai.mariposa.feature.characters.list
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.Pager
@@ -23,9 +24,18 @@ import kotlinx.coroutines.flow.map
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class CharacterListViewModel @Inject constructor(
+    private val savedStateHandle: SavedStateHandle,
     private val getCharacters: GetCharactersUseCase,
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(CharacterListUiState())
+    private val _uiState = MutableStateFlow(
+        CharacterListUiState(
+            query = savedStateHandle[CHARACTER_LIST_QUERY_KEY] ?: "",
+            firstVisibleItemIndex = savedStateHandle[CHARACTER_LIST_FIRST_VISIBLE_ITEM_INDEX_KEY] ?: 0,
+            firstVisibleItemScrollOffset = savedStateHandle[
+                CHARACTER_LIST_FIRST_VISIBLE_ITEM_SCROLL_OFFSET_KEY
+            ] ?: 0,
+        ),
+    )
     val uiState = _uiState.asStateFlow()
 
     internal val searchQueries: Flow<String> = uiState
@@ -53,11 +63,27 @@ class CharacterListViewModel @Inject constructor(
     fun onAction(action: CharacterListAction) {
         when (action) {
             is CharacterListAction.QueryChanged -> {
+                savedStateHandle[CHARACTER_LIST_QUERY_KEY] = action.query
                 _uiState.value = _uiState.value.copy(query = action.query)
+            }
+
+            is CharacterListAction.ListPositionChanged -> {
+                savedStateHandle[CHARACTER_LIST_FIRST_VISIBLE_ITEM_INDEX_KEY] =
+                    action.firstVisibleItemIndex
+                savedStateHandle[CHARACTER_LIST_FIRST_VISIBLE_ITEM_SCROLL_OFFSET_KEY] =
+                    action.firstVisibleItemScrollOffset
+                _uiState.value = _uiState.value.copy(
+                    firstVisibleItemIndex = action.firstVisibleItemIndex,
+                    firstVisibleItemScrollOffset = action.firstVisibleItemScrollOffset,
+                )
             }
         }
     }
 }
 
 internal const val CHARACTER_SEARCH_DEBOUNCE_MILLIS = 300L
+internal const val CHARACTER_LIST_QUERY_KEY = "character_list_query"
+internal const val CHARACTER_LIST_FIRST_VISIBLE_ITEM_INDEX_KEY = "character_list_first_visible_item_index"
+internal const val CHARACTER_LIST_FIRST_VISIBLE_ITEM_SCROLL_OFFSET_KEY =
+    "character_list_first_visible_item_scroll_offset"
 private const val NETWORK_PAGE_SIZE = 20

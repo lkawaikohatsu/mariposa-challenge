@@ -1,6 +1,7 @@
 package com.luizkawai.mariposa.feature.characters.list
 
 import app.cash.turbine.test
+import androidx.lifecycle.SavedStateHandle
 import com.luizkawai.mariposa.domain.usecase.GetCharactersUseCase
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
@@ -23,7 +24,10 @@ class CharacterListViewModelTest {
         val dispatcher = StandardTestDispatcher(testScheduler)
         Dispatchers.setMain(dispatcher)
         try {
-            val viewModel = CharacterListViewModel(getCharacters)
+            val viewModel = CharacterListViewModel(
+                savedStateHandle = SavedStateHandle(),
+                getCharacters = getCharacters,
+            )
 
             viewModel.searchQueries.test {
                 advanceTimeBy(CHARACTER_SEARCH_DEBOUNCE_MILLIS)
@@ -48,5 +52,25 @@ class CharacterListViewModelTest {
         } finally {
             Dispatchers.resetMain()
         }
+    }
+
+    @Test
+    fun `restores the query and list position from saved state`() {
+        val savedStateHandle = SavedStateHandle(
+            mapOf(
+                CHARACTER_LIST_QUERY_KEY to "morty",
+                CHARACTER_LIST_FIRST_VISIBLE_ITEM_INDEX_KEY to 12,
+                CHARACTER_LIST_FIRST_VISIBLE_ITEM_SCROLL_OFFSET_KEY to 40,
+            ),
+        )
+
+        val viewModel = CharacterListViewModel(
+            savedStateHandle = savedStateHandle,
+            getCharacters = getCharacters,
+        )
+
+        assertEquals("morty", viewModel.uiState.value.query)
+        assertEquals(12, viewModel.uiState.value.firstVisibleItemIndex)
+        assertEquals(40, viewModel.uiState.value.firstVisibleItemScrollOffset)
     }
 }

@@ -1,5 +1,6 @@
 package com.luizkawai.mariposa.feature.characters.detail
 
+import app.cash.turbine.test
 import androidx.lifecycle.SavedStateHandle
 import com.luizkawai.mariposa.core.navigation.AppDestination
 import com.luizkawai.mariposa.domain.model.Character
@@ -77,6 +78,66 @@ class CharacterDetailViewModelTest {
             runCurrent()
 
             assertTrue(viewModel.uiState.value.hasFavoriteOperationError)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `marks the detail error as offline when loading fails without a connection`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        coEvery { getCharacter(1) } throws IOException()
+        every { observeFavoriteIds() } returns flowOf(emptySet())
+
+        try {
+            val viewModel = CharacterDetailViewModel(
+                savedStateHandle = SavedStateHandle(
+                    mapOf(AppDestination.CHARACTER_ID_ARGUMENT to 1),
+                ),
+                getCharacter = getCharacter,
+                observeFavoriteIds = observeFavoriteIds,
+                toggleFavorite = toggleFavorite,
+            )
+            runCurrent()
+
+            assertTrue(viewModel.uiState.value.hasError)
+            assertTrue(viewModel.uiState.value.isOfflineError)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `emits favorite feedback after a successful update`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        coEvery { getCharacter(1) } returns testCharacter
+        coEvery { toggleFavorite(testCharacter) } returns Unit
+        every { observeFavoriteIds() } returns flowOf(emptySet())
+
+        try {
+            val viewModel = CharacterDetailViewModel(
+                savedStateHandle = SavedStateHandle(
+                    mapOf(AppDestination.CHARACTER_ID_ARGUMENT to 1),
+                ),
+                getCharacter = getCharacter,
+                observeFavoriteIds = observeFavoriteIds,
+                toggleFavorite = toggleFavorite,
+            )
+            runCurrent()
+
+            viewModel.events.test {
+                viewModel.onAction(CharacterDetailAction.FavoriteClicked)
+                runCurrent()
+
+                assertEquals(
+                    CharacterDetailEvent.FavoriteUpdated(
+                        character = testCharacter,
+                        wasFavorite = false,
+                    ),
+                    awaitItem(),
+                )
+                cancelAndIgnoreRemainingEvents()
+            }
         } finally {
             Dispatchers.resetMain()
         }

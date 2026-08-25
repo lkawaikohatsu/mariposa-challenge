@@ -53,8 +53,8 @@ fun FavoritesScreen(
     onBack: () -> Unit,
     onCharacterClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val favoriteErrorMessage = stringResource(R.string.unable_to_update_favorite)
     val retryLabel = stringResource(R.string.retry)
 

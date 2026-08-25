@@ -19,9 +19,15 @@
     <string name="unable_to_load_characters">No pudimos cargar los personajes.</string>
     <string name="unable_to_load_more_characters">No pudimos cargar más personajes.</string>
     <string name="unable_to_load_character">No pudimos cargar este personaje.</string>
+    <string name="offline_characters">Sin conexión a internet. Revisa tu red y vuelve a intentarlo.</string>
+    <string name="offline_more_characters">Sin conexión. No pudimos cargar más personajes.</string>
+    <string name="offline_character">Sin conexión a internet. Revisa tu red y vuelve a intentarlo.</string>
     <string name="unable_to_load_favorites">No pudimos cargar tus favoritos.</string>
     <string name="unable_to_update_favorite">No pudimos actualizar el favorito.</string>
     <string name="retry">Reintentar</string>
+    <string name="undo">Deshacer</string>
+    <string name="favorite_added">Agregado a favoritos.</string>
+    <string name="favorite_removed">Quitado de favoritos.</string>
     <string name="remove">Quitar</string>
     <string name="no_favorite_characters">Aún no tienes personajes favoritos.</string>
     <string name="empty_characters_list_description">Lista de personajes vacía</string>

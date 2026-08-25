@@ -1,5 +1,6 @@
 package com.luizkawai.mariposa.feature.favorites
 
+import app.cash.turbine.test
 import com.luizkawai.mariposa.domain.model.Character
 import com.luizkawai.mariposa.domain.usecase.ObserveFavoritesUseCase
 import com.luizkawai.mariposa.domain.usecase.ToggleFavoriteUseCase
@@ -40,6 +41,31 @@ class FavoritesViewModelTest {
             runCurrent()
 
             assertEquals(testCharacter, viewModel.uiState.value.favoriteOperationError)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun `emits undo feedback after removing a favorite`() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        every { observeFavorites() } returns flowOf(listOf(testCharacter))
+        coEvery { toggleFavorite(testCharacter) } returns Unit
+
+        try {
+            val viewModel = FavoritesViewModel(
+                observeFavorites = observeFavorites,
+                toggleFavorite = toggleFavorite,
+            )
+            runCurrent()
+
+            viewModel.events.test {
+                viewModel.onAction(FavoritesAction.FavoriteClicked(testCharacter))
+                runCurrent()
+
+                assertEquals(FavoritesEvent.FavoriteRemoved(testCharacter), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
         } finally {
             Dispatchers.resetMain()
         }

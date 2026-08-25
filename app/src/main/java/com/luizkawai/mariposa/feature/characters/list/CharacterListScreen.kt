@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
@@ -53,12 +54,14 @@ import com.luizkawai.mariposa.R
 import com.luizkawai.mariposa.core.designsystem.CharacterArtwork
 import com.luizkawai.mariposa.core.designsystem.theme.MariposaTheme
 import com.luizkawai.mariposa.domain.model.Character
+import java.io.IOException
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CharacterListScreen(
     uiState: CharacterListUiState,
     characters: LazyPagingItems<Character>,
+    listState: LazyListState,
     onAction: (CharacterListAction) -> Unit,
     onCharacterClick: (Int) -> Unit,
     onFavoritesClick: () -> Unit,
@@ -110,6 +113,7 @@ fun CharacterListScreen(
 
             CharacterPagingContent(
                 characters = characters,
+                listState = listState,
                 onCharacterClick = onCharacterClick,
             )
         }
@@ -164,12 +168,19 @@ private fun SearchHeader(
 @Composable
 private fun CharacterPagingContent(
     characters: LazyPagingItems<Character>,
+    listState: LazyListState,
     onCharacterClick: (Int) -> Unit,
 ) {
     when (val refreshState = characters.loadState.refresh) {
         is LoadState.Loading -> LoadingState()
         is LoadState.Error -> ErrorState(
-            message = stringResource(R.string.unable_to_load_characters),
+            message = stringResource(
+                if (refreshState.error.isNetworkUnavailable()) {
+                    R.string.offline_characters
+                } else {
+                    R.string.unable_to_load_characters
+                },
+            ),
             onRetry = characters::retry,
         )
 
@@ -178,6 +189,7 @@ private fun CharacterPagingContent(
                 EmptyState()
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 20.dp, top = 8.dp, end = 20.dp, bottom = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
@@ -198,7 +210,13 @@ private fun CharacterPagingContent(
                         is LoadState.Loading -> item { AppendLoadingState() }
                         is LoadState.Error -> item {
                             AppendErrorState(
-                                message = stringResource(R.string.unable_to_load_more_characters),
+                                message = stringResource(
+                                    if (appendState.error.isNetworkUnavailable()) {
+                                        R.string.offline_more_characters
+                                    } else {
+                                        R.string.unable_to_load_more_characters
+                                    },
+                                ),
                                 onRetry = characters::retry,
                             )
                         }
@@ -210,6 +228,10 @@ private fun CharacterPagingContent(
         }
     }
 }
+
+private fun Throwable.isNetworkUnavailable(): Boolean =
+    generateSequence(this) { throwable -> throwable.cause }
+        .any { throwable -> throwable is IOException }
 
 @Composable
 private fun CharacterListItem(

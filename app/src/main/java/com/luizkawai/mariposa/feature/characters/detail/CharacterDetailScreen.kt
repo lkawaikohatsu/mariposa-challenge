@@ -50,8 +50,8 @@ fun CharacterDetailScreen(
     onAction: (CharacterDetailAction) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
-    val snackbarHostState = remember { SnackbarHostState() }
     val favoriteErrorMessage = stringResource(R.string.unable_to_update_favorite)
     val retryLabel = stringResource(R.string.retry)
 
@@ -108,7 +108,13 @@ fun CharacterDetailScreen(
         when {
             uiState.isLoading -> DetailLoadingState(modifier = Modifier.padding(paddingValues))
             uiState.hasError -> DetailErrorState(
-                message = stringResource(R.string.unable_to_load_character),
+                message = stringResource(
+                    if (uiState.isOfflineError) {
+                        R.string.offline_character
+                    } else {
+                        R.string.unable_to_load_character
+                    },
+                ),
                 onRetry = { onAction(CharacterDetailAction.RetryClicked) },
                 modifier = Modifier.padding(paddingValues),
             )

@@ -9,7 +9,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -21,6 +23,8 @@ class FavoritesViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(FavoritesUiState())
     val uiState = _uiState.asStateFlow()
+    private val _events = MutableSharedFlow<FavoritesEvent>()
+    val events = _events.asSharedFlow()
 
     init {
         observeFavoritesFromDatabase()
@@ -29,11 +33,17 @@ class FavoritesViewModel @Inject constructor(
     fun onAction(action: FavoritesAction) {
         when (action) {
             is FavoritesAction.FavoriteClicked -> {
-                toggleFavoriteCharacter(action.character)
+                toggleFavoriteCharacter(action.character, showFeedback = true)
+            }
+
+            is FavoritesAction.UndoFavoriteClicked -> {
+                toggleFavoriteCharacter(action.character, showFeedback = false)
             }
 
             FavoritesAction.RetryFavoriteClicked -> {
-                uiState.value.favoriteOperationError?.let(::toggleFavoriteCharacter)
+                uiState.value.favoriteOperationError?.let { character ->
+                    toggleFavoriteCharacter(character, showFeedback = false)
+                }
             }
 
             FavoritesAction.DismissFavoriteError -> {
@@ -62,10 +72,18 @@ class FavoritesViewModel @Inject constructor(
         }
     }
 
-    private fun toggleFavoriteCharacter(character: Character) {
+    private fun toggleFavoriteCharacter(
+        character: Character,
+        showFeedback: Boolean,
+    ) {
         viewModelScope.launch {
             _uiState.update { it.copy(favoriteOperationError = null) }
             runCatching { toggleFavorite(character) }
+                .onSuccess {
+                    if (showFeedback) {
+                        _events.emit(FavoritesEvent.FavoriteRemoved(character))
+                    }
+                }
                 .onFailure { exception ->
                     if (exception is CancellationException) throw exception
                     _uiState.update { it.copy(favoriteOperationError = character) }
