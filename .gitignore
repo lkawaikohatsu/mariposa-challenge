@@ -6,6 +6,9 @@
 # Local SDK configuration
 /local.properties
 
+# Personal preparation notes (kept only in the local workspace)
+/docs/
+
 # Android Studio and IntelliJ files
 /.idea/
 *.iml

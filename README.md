@@ -1,6 +1,6 @@
 # Mariposa
 
-Explorador de personajes de Rick and Morty construido con Kotlin y Jetpack Compose. El objetivo es demostrar una solución Android moderna, legible y testeable: lista paginada, búsqueda remota, detalle y favoritos persistentes.
+Explorador de personajes de Rick and Morty construido con Kotlin y Jetpack Compose. Incluye lista paginada, búsqueda remota, detalle y favoritos persistentes.
 
 ## Requisitos funcionales
 
@@ -52,6 +52,10 @@ Separar desde el inicio en muchos módulos habría aumentado configuración Grad
 
 No se introdujeron `BaseViewModel`, `BaseRepository`, `BaseUseCase`, un store MVI ni wrappers genéricos de resultados. Para este alcance, esas abstracciones ocultarían el flujo y crearían acoplamiento sin reutilización real.
 
+### Dependencias y build
+
+Hilt construye Retrofit, Room, repositorio y ViewModels. Retrofit + OkHttp + Kotlin Serialization consumen la API y mantienen DTOs en `data`. Las versiones viven en `gradle/libs.versions.toml`; el proyecto usa Kotlin DSL y `minSdk 24`.
+
 ### MVVM + UDF
 
 Cada feature expone un `UiState` inmutable y recibe `UiAction`. Los ViewModels usan `StateFlow`; las Routes observan mediante `collectAsStateWithLifecycle()`. Las Screens reciben estado y callbacks, sin repositorios ni lógica de negocio. Los eventos puntuales —como mostrar “Deshacer”— se emiten separadamente para no convertir una notificación efímera en estado persistente.
@@ -88,7 +92,9 @@ Navigation Compose recibe únicamente `characterId`; no se serializan objetos de
 
 La app usa Material 3, Dynamic Color cuando Android lo permite y tema claro/oscuro. Coil carga imágenes con caché y placeholder. Las animaciones nativas se limitan al contexto de búsqueda y favorito para aportar feedback sin distraer. Los textos propios están centralizados en recursos, los valores de la API conservan su idioma original y las acciones principales incluyen semántica accesible.
 
-No se añadió un observador global de conectividad: para esta prueba es suficiente clasificar el error de la operación que falló. Un monitor global agregaría estado y permisos/edge cases sin resolver por sí mismo una solicitud fallida.
+No se añadió un observador global de conectividad: para esta prueba basta clasificar el error de la operación y ofrecer reintento.
+
+`remember` se usa para estado puramente visual, como `SnackbarHostState` y `LazyListState`. No se fuerza `rememberSaveable` porque el contexto que debe sobrevivir recreación (búsqueda y scroll) ya vive en `SavedStateHandle`; tampoco se usa `derivedStateOf` sin un cálculo derivado costoso que lo justifique.
 
 ## Ejecución
 
@@ -116,7 +122,7 @@ El APK se genera en `app/build/outputs/apk/debug/`.
 ./gradlew connectedDebugAndroidTest
 ```
 
-El reporte de cobertura se genera en `app/build/reports/coverage/test/debug/`. No se aplica todavía un umbral: primero se busca visibilidad y una línea base útil, evitando que una métrica global incentive tests sin valor.
+El reporte de cobertura se genera en `app/build/reports/coverage/test/debug/`. No hay umbral todavía: se usa como línea base para mejorar pruebas sobre comportamiento crítico.
 
 Cobertura incluida:
 
@@ -136,13 +142,18 @@ El workflow [Android CI](.github/workflows/android-ci.yml) se ejecuta en cada pu
 
 Las pruebas instrumentadas se mantienen fuera del CI base porque requieren un emulador gestionado; incorporarlo es una mejora razonable si el proyecto necesita esa señal en cada pull request.
 
-## Guía de entrevista
+## Opcionales realizados
 
-Las preguntas, respuestas y alternativas discutibles de esta solución están en [docs/interview-questions.md](docs/interview-questions.md). Sirve para defender decisiones con sus límites, no para afirmar que existe una única arquitectura correcta.
+- Paging 3 integrado con Compose.
+- Test instrumentado de Compose.
+- Animaciones nativas de Compose.
+- Tema claro/oscuro y Dynamic Color.
+- Coil para imágenes.
+- CI con tests unitarios, lint, ensamblado, compilación de `androidTest` y cobertura.
 
-## Trade-offs y mejoras futuras
+## Pendientes y motivo
 
-- Modularizar `core`, `data`, `domain` y cada feature cuando el proyecto crezca.
-- Añadir pruebas Room con base de datos en memoria y pruebas de navegación end-to-end.
-- Añadir caché remoto si el producto requiere navegación offline más allá de favoritos.
-- Ampliar recursos de idioma, revisar el nivel de logging de OkHttp antes de producción y evaluar un emulador gestionado para CI.
+- Caché remota completa: no es requisito y requiere definir expiración e invalidación.
+- Room en memoria y navegación end-to-end: ampliarían pruebas de integración.
+- Emulador gestionado en CI: ejecutaría instrumentados, pero aumenta tiempo y costo del pipeline.
+- Modularización Gradle: se haría cuando el tamaño, tiempos de build o equipos lo justifiquen.
