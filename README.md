@@ -109,9 +109,14 @@ El APK se genera en `app/build/outputs/apk/debug/`.
 # Lint
 ./gradlew lintDebug
 
+# Reporte HTML/XML de cobertura de tests unitarios
+./gradlew :app:createDebugUnitTestCoverageReport
+
 # Tests instrumentados / Compose con dispositivo o emulador conectado
 ./gradlew connectedDebugAndroidTest
 ```
+
+El reporte de cobertura se genera en `app/build/reports/coverage/test/debug/`. No se aplica todavía un umbral: primero se busca visibilidad y una línea base útil, evitando que una métrica global incentive tests sin valor.
 
 Cobertura incluida:
 
@@ -127,7 +132,9 @@ La validación local del código confirma `testDebugUnitTest`, `assembleDebug` y
 
 ## Integración continua
 
-El workflow [Android CI](.github/workflows/android-ci.yml) se ejecuta en cada push y pull request hacia `main`; también puede iniciarse manualmente. Ejecuta `testDebugUnitTest`, `lintDebug` y `assembleDebug` con JDK 17. Las pruebas instrumentadas se mantienen fuera del CI base porque requieren un emulador gestionado; incorporarlo es una mejora razonable si el proyecto necesita esa señal en cada pull request.
+El workflow [Android CI](.github/workflows/android-ci.yml) se ejecuta en cada push y pull request hacia `main`; también puede iniciarse manualmente. Con JDK 17 ejecuta tests unitarios, lint, `assembleDebug`, `assembleDebugAndroidTest` y el reporte nativo JaCoCo de cobertura. El reporte de cobertura se conserva 14 días como artefacto del run.
+
+Las pruebas instrumentadas se mantienen fuera del CI base porque requieren un emulador gestionado; incorporarlo es una mejora razonable si el proyecto necesita esa señal en cada pull request.
 
 ## Guía de entrevista
 
